@@ -11,83 +11,132 @@ class Input extends Component {
 			queryText: "",
 			caretPositions: [0,0],
 			results: [],
-			imeOn: true,
+			imeHidden: true,
 		};
 		this.IMEBubbleRef = React.createRef();
 		this.MainInputFieldRef = React.createRef();
 		this.handleIMEKeyUp = this.handleIMEKeyUp.bind(this);
 		this.handleInputChange = this.handleInputChange.bind(this);
 		this.handleInputKeyDown = this.handleInputKeyDown.bind(this);
+		this.handleInputSelect = this.handleInputSelect.bind(this);
+		this.handleIMEOff = this.handleIMEOff.bind(this);
+		this.handleResultMouseDown = this.handleResultMouseDown.bind(this);
 	}
 	insertPhrase(phrase) {
-		this.setState({inputText: phrase});
+		const inputText = this.state.inputText;
+		const firstInputText = inputText.slice(0,this.state.caretPositions[0])
+		const secondInputText = inputText.slice(this.state.caretPositions[1])
+		this.setState({
+			inputText:firstInputText+phrase+secondInputText,
+			queryText: "",
+			results: [],
+		});
+	}
+	hideIME() {
+		this.setState(state => ({
+			imeHidden: true
+		}));
+	}
+	showIME() {
+		this.setState(state => ({
+			imeHidden: false
+		}));
 	}
 	handleIMEKeyUp(event) {
 		event.preventDefault();
-		this.setState({queryText: event.target.value});
 		const charCode = event.which;
-		console.log(charCode);
 		if (charCode>48 && charCode<(49+(this.state.results.length))) {
 			this.insertPhrase(this.state.results[charCode-49]);
+			this.MainInputFieldRef.current.focus();
+			this.hideIME();
+			return;
 		}
+		this.setState({queryText: event.target.value});
 		this.getCharacters(event.target.value);
 	}
 	handleInputChange(event) {
 	  this.setState({inputText: event.target.value});
 	}
 	handleInputKeyDown(event) {
-		console.log(event.which);
 		if (event.ctrlKey || event.which<65 || event.which>90){
 			return;
 		}
-		console.log(this.IMEBubbleRef.current.queryInputRef.current);
-		this.IMEBubbleRef.current.queryInputRef.current.focus();
+		this.showIME();
+		// this.IMEBubbleRef.current.queryInputRef.current.focus();
 	}
-	render() {
-		return (
-			<div>
-				<MainInputField 
-					value={this.state.inputText} 
-					onChange={this.handleInputChange}
-					onKeyDown={this.handleInputKeyDown}
-					ref = {this.MainInputFieldRef}
-				></MainInputField>		
-				<ImeBubble 
-					results={this.state.results}
-					onKeyUp={this.handleIMEKeyUp}
-					ref = {this.IMEBubbleRef}
-				></ImeBubble>
-			</div>
-		)
+	handleInputSelect(e) {
+		this.setState({caretPositions: [e.target.selectionStart,e.target.selectionEnd]});
 	}
+	handleIMEOff() {
+		this.hideIME();
+	}
+	handleResultMouseDown(event) {
+		this.insertPhrase(event.target.textContent);
+		this.MainInputFieldRef.current.focus();
+		// this.hideIME();
+	}	
 	getCharacters(queriedText) {
 		if (queriedText==="") {
 			this.setState({results: []});
 		} else {
 			fetch("https://www.google.com/inputtools/request?"+
-				"ime=pinyin&ie=utf-8&oe=utf-8&app=translate&num="+ 5 +"&text=" 
-				+ queriedText)
+				"ime=pinyin&ie=utf-8&oe=utf-8&app=translate&num="+
+						this.props.numResults+"&text="+ queriedText)
 				.then( response => response.json() )
 				.then( json => {
 					this.setState({results: json[1][0][1]});
 				});
 		}
 	}
-}
 
-class MainInputField extends Component {
 	render() {
 		return (
-			<input 
-				type="text"
-				value={this.props.value}
-				onChange={this.props.onChange}
-				onKeyDown={this.props.onKeyDown}
-				// onKeyDown={() => this.getCharacters(this.props.value)}
-			/>
-		);
+			<div>
+				{this.props.textArea ? 
+					(<textarea 
+						rows="4" cols="50"
+						type="text"
+						value={this.state.inputText} 
+						onChange={this.handleInputChange}
+						onKeyDown={this.handleInputKeyDown}
+						onSelect={this.handleInputSelect}
+						ref = {this.MainInputFieldRef}
+					></textarea>)	: 	
+					(<input 
+						type="text"
+						value={this.state.inputText} 
+						onChange={this.handleInputChange}
+						onKeyDown={this.handleInputKeyDown}
+						onSelect={this.handleInputSelect}
+						ref = {this.MainInputFieldRef}
+					></input>)
+				}
+				{!this.state.imeHidden && 
+				<ImeBubble 
+					results={this.state.results}
+					onKeyUp={this.handleIMEKeyUp}
+					onBlur={this.handleIMEOff}
+					onMouseDown={this.handleResultMouseDown}
+					ref = {this.IMEBubbleRef}
+				></ImeBubble>}
+			</div>
+		)
 	}
 }
+
+// class MainInputField extends Component {
+// 	render() {
+// 		return (
+// 			<input 
+// 				type="text"
+// 				value={this.props.value}
+// 				onChange={this.props.onChange}
+// 				onKeyDown={this.props.onKeyDown}
+// 				onSelect={this.props.onSelect}
+// 			/>
+// 		);
+// 	}
+// }
 
 class	ImeBubble extends Component {
 	constructor(props) {
@@ -95,6 +144,9 @@ class	ImeBubble extends Component {
 	   // Declare and initialize the ref in the constructor
 		this.queryInputRef = React.createRef();
 	 }
+	componentDidMount(){
+		this.queryInputRef.current.focus();
+	}
 	renderResult(i) {
 		return (
 				<Result value={i}></Result>
@@ -105,15 +157,17 @@ class	ImeBubble extends Component {
 			return <Result 
 				key={string}
 				value={string}
+				onMouseDown={this.props.onMouseDown}
 			></Result>;
 		})
 		return (
 			<div>
-			<input 
-				type="text"
-				onKeyUp={ this.props.onKeyUp }
-				ref={this.queryInputRef}
-			/>
+				<input 
+					type="text"
+					onKeyUp={ this.props.onKeyUp }
+					onBlur={ this.props.onBlur }
+					ref={this.queryInputRef}
+				/>
 				<br/>
 				<ol>{items}</ol>
 			</div>
@@ -137,7 +191,11 @@ class	ImeBubble extends Component {
 class	Result extends Component {
 	render() {
 		return (
-			<li >{this.props.value}</li>
+			<li
+				onMouseDown= {this.props.onMouseDown}
+			>
+			{this.props.value}
+			</li>
 		);
 	}
 }
@@ -147,6 +205,9 @@ export default ImeBubble;
 // ========================================
 
 ReactDOM.render(
-  <Input />,
+  <Input
+  	textArea={true}
+  	numResults = "5"
+  />,
   document.getElementById('root')
 );
