@@ -3,7 +3,7 @@ import {Component} from 'react';
 import ReactDOM from 'react-dom';
 // import './index.css';
 
-class Input extends Component {
+class InputMethodEditor extends Component {
 	constructor(props) {
 		super(props);
 		this.state = {
@@ -94,6 +94,7 @@ class Input extends Component {
 			<div>
 				{this.props.textArea ? 
 					(<textarea 
+						id={this.props.idName}
 						rows="4" cols="50"
 						type="text"
 						value={this.state.inputText} 
@@ -103,6 +104,7 @@ class Input extends Component {
 						ref = {this.MainInputFieldRef}
 					></textarea>)	: 	
 					(<input 
+						id={this.props.idName}
 						type="text"
 						value={this.state.inputText} 
 						onChange={this.handleInputChange}
@@ -112,7 +114,7 @@ class Input extends Component {
 					></input>)
 				}
 				{!this.state.imeHidden && 
-				<ImeBubble 
+				<ImeBubble
 					results={this.state.results}
 					onKeyUp={this.handleIMEKeyUp}
 					onBlur={this.handleIMEOff}
@@ -123,20 +125,6 @@ class Input extends Component {
 		)
 	}
 }
-
-// class MainInputField extends Component {
-// 	render() {
-// 		return (
-// 			<input 
-// 				type="text"
-// 				value={this.props.value}
-// 				onChange={this.props.onChange}
-// 				onKeyDown={this.props.onKeyDown}
-// 				onSelect={this.props.onSelect}
-// 			/>
-// 		);
-// 	}
-// }
 
 class	ImeBubble extends Component {
 	constructor(props) {
@@ -161,7 +149,13 @@ class	ImeBubble extends Component {
 			></Result>;
 		})
 		return (
-			<div>
+			<div  
+				style={{
+					position:'absolute',
+					zIndex: '99',
+					backgroundColor: 'gray',
+					textAlign: 'left',
+				}}>
 				<input 
 					type="text"
 					onKeyUp={ this.props.onKeyUp }
@@ -175,19 +169,6 @@ class	ImeBubble extends Component {
 	}
 }
 
-// class	ImeInputField extends Component {
-// 	render() {
-// 		let queryInputRef = React.createRef();
-// 		return (
-// 			<input 
-// 				type="text"
-// 				onKeyUp={ this.props.onKeyUp }
-// 				ref={queryInputRef}
-// 			/>
-// 		);
-// 	}
-// }
-
 class	Result extends Component {
 	render() {
 		return (
@@ -200,14 +181,4 @@ class	Result extends Component {
 	}
 }
 
-export default ImeBubble;
-
-// ========================================
-
-ReactDOM.render(
-  <Input
-  	textArea={true}
-  	numResults = "5"
-  />,
-  document.getElementById('root')
-);
+export default InputMethodEditor;
